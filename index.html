@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Portfolio</title>
+
   <style>
     :root{
       --bg:#07090d;
@@ -48,6 +49,13 @@
       flex-wrap:wrap;
     }
 
+    .leftHead{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+      min-width: 240px;
+    }
+
     h1{
       margin:0;
       font-size: 22px;
@@ -90,6 +98,7 @@
       background: rgba(255,255,255,0.03);
       color: var(--muted);
       user-select:none;
+      white-space: nowrap;
     }
 
     .status{
@@ -119,6 +128,38 @@
       50%{ transform: scale(1.1); opacity:1; }
     }
 
+    .topNav{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 12px;
+      flex-wrap:wrap;
+      margin-top: 4px;
+    }
+
+    .crumbs{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex-wrap:wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .crumbs button, .crumbs a{
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 999px;
+      cursor:pointer;
+      text-decoration:none;
+      font-size: 12px;
+    }
+    .crumbs button:hover, .crumbs a:hover{
+      color: var(--text);
+      border-color: rgba(125,211,252,0.25);
+    }
+
     .grid{
       display:grid;
       grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -126,7 +167,7 @@
       margin-top: 14px;
     }
 
-    a.card{
+    a.card, button.card{
       text-decoration:none;
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -141,8 +182,11 @@
       min-height: 110px;
       position: relative;
       overflow:hidden;
+      cursor:pointer;
+      color: inherit;
+      text-align:left;
     }
-    a.card:hover{
+    a.card:hover, button.card:hover{
       transform: translateY(-2px);
       border-color: rgba(125,211,252,0.35);
       background: rgba(255,255,255,0.05);
@@ -164,10 +208,11 @@
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(255,255,255,0.03);
       color: var(--accent);
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: .5px;
       flex: 0 0 auto;
     }
+    .badge.folder{ color: var(--accent2); }
 
     .meta{
       min-width:0;
@@ -206,7 +251,7 @@
       color: rgba(238,242,255,0.78);
     }
 
-    /* image thumbnail support (optional) */
+    /* Thumbnail (used for galleries + images) */
     .thumb{
       margin-top: 2px;
       border-radius: 14px;
@@ -221,6 +266,46 @@
       height:100%;
       object-fit: cover;
       display:block;
+    }
+
+    /* Gallery view */
+    .gallery{
+      margin-top: 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+    .galleryItem{
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.03);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .galleryItem img{
+      width:100%;
+      display:block;
+      height:auto;
+    }
+    .galleryCaption{
+      display:flex;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 12px;
+      align-items:center;
+    }
+    .galleryCaption a{
+      color: var(--muted);
+      text-decoration:none;
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      border-radius: 999px;
+    }
+    .galleryCaption a:hover{
+      color: var(--text);
+      border-color: rgba(125,211,252,0.25);
     }
 
     .empty{
@@ -238,15 +323,18 @@
   <div class="wrap">
     <header>
       <div class="titleRow">
-        <div>
-          <h1>Portfolio</h1>
-          <p class="tagline">A simple gallery of everything in this site. Click any card to open it.</p>
+        <div class="leftHead">
+          <h1 id="pageTitle">Portfolio</h1>
+          <p class="tagline" id="tagline">Click anything to open it. Image folders become scrollable galleries.</p>
         </div>
       </div>
 
-      <div class="controls">
-        <input id="search" class="search" type="search" placeholder="Search… (type to filter)" />
-        <div class="chip" id="countChip">0 items</div>
+      <div class="topNav">
+        <div class="crumbs" id="crumbs"></div>
+        <div class="controls" style="flex:1; justify-content:flex-end;">
+          <input id="search" class="search" type="search" placeholder="Search…" />
+          <div class="chip" id="countChip">0 items</div>
+        </div>
       </div>
     </header>
 
@@ -255,43 +343,72 @@
       <div id="statusText">Loading…</div>
     </div>
 
-    <div class="grid" id="grid"></div>
-    <div class="empty" id="empty" style="display:none;">No results.</div>
+    <div id="content">
+      <div class="grid" id="grid"></div>
+      <div class="gallery" id="gallery" style="display:none;"></div>
+      <div class="empty" id="empty" style="display:none;">No results.</div>
+    </div>
   </div>
 
   <script>
     /**
-     * Optional: If you use a custom domain and auto-detection fails,
+     * If you use a custom domain and auto-detection fails,
      * set these (or use query params owner/repo/branch/startPath).
      */
     const CONFIG = {
       owner: "",
       repo: "",
       branch: "",
-      startPath: ""
+      startPath: "" // scan from this subfolder ("" = repo root)
     };
+
+    const IMAGE_EXTS = new Set(["png","jpg","jpeg","webp","gif","svg","avif"]);
+    const HIDE_FILES = new Set(["index.html"]); // keep landing page out of the grid
 
     const $ = (id) => document.getElementById(id);
 
     const grid = $("grid");
+    const gallery = $("gallery");
     const search = $("search");
     const statusText = $("statusText");
     const countChip = $("countChip");
     const emptyBox = $("empty");
     const statusBox = $("status");
+    const crumbs = $("crumbs");
+    const pageTitle = $("pageTitle");
+    const tagline = $("tagline");
 
+    // State
+    let ctx = null;                     // { owner, repo, branch, startPath, basePath }
+    let dirChildren = new Map();        // dirPath -> [items from GitHub contents API]
+    let allFiles = [];                  // {path,name,size}
+    let allDirs = new Set();            // all dir paths discovered
+    let galleryDirs = new Set();        // dir paths that contain ONLY images (direct children)
+    let galleryThumb = new Map();       // dirPath -> imagePath (for preview)
+    let childDirMap = new Map();        // dirPath -> Set(childDirPath)
+
+    // ---------- Utility ----------
     function getQueryParams() {
       const p = new URLSearchParams(location.search);
       return {
         owner: p.get("owner") || "",
         repo: p.get("repo") || "",
         branch: p.get("branch") || "",
-        startPath: p.get("startPath") || ""
+        startPath: p.get("startPath") || "",
+        p: p.get("p") || "" // navigation path
       };
     }
 
+    function setRoutePath(p) {
+      const url = new URL(location.href);
+      if (p) url.searchParams.set("p", p);
+      else url.searchParams.delete("p");
+      history.pushState({}, "", url.toString());
+      renderRoute();
+    }
+
     function detectPagesContext() {
-      // Works for typical github.io hosting:
+      // github.io only:
       // - https://OWNER.github.io/        -> repo = OWNER/OWNER.github.io
       // - https://OWNER.github.io/REPO/   -> repo = OWNER/REPO
       const host = location.hostname;
@@ -301,7 +418,6 @@
       const firstSeg = location.pathname.split("/").filter(Boolean)[0] || "";
       const repo = firstSeg ? firstSeg : `${owner}.github.io`;
       const basePath = firstSeg ? `/${firstSeg}/` : `/`;
-
       return { owner, repo, basePath };
     }
 
@@ -311,7 +427,11 @@
       return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
     }
 
-    function iconTextFor(path) {
+    function isImagePath(path) {
+      return IMAGE_EXTS.has(extOf(path));
+    }
+
+    function iconTextForFile(path) {
       const ext = extOf(path);
       if (!ext) return "FILE";
       return ext.length <= 4 ? ext.toUpperCase() : ext.slice(0, 4).toUpperCase();
@@ -325,18 +445,24 @@
       return `${v.toFixed(v >= 10 || u === 0 ? 0 : 1)} ${units[u]}`;
     }
 
-    function isThumbableImage(path){
-      const ext = extOf(path);
-      return ["png","jpg","jpeg","webp","gif","svg"].includes(ext);
-    }
-
     function buildPagesLink(basePath, filePath) {
       const cleanBase = basePath.endsWith("/") ? basePath : basePath + "/";
       return cleanBase + filePath.split("/").map(encodeURIComponent).join("/");
     }
 
+    function labelForDir(dirPath) {
+      const parts = dirPath.split("/").filter(Boolean);
+      return parts.length ? parts[parts.length - 1] : "Home";
+    }
+
+    function normalizeDir(p) {
+      return (p || "").replace(/^\/+/, "").replace(/\/+$/, "");
+    }
+
+    // ---------- GitHub scanning ----------
     async function fetchDirContents(owner, repo, path, branch) {
-      const url = new URL(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}`);
+      const enc = encodeURIComponent(path).replaceAll("%2F", "/");
+      const url = new URL(`https://api.github.com/repos/${owner}/${repo}/contents/${enc}`);
       if (branch) url.searchParams.set("ref", branch);
 
       const res = await fetch(url.toString(), {
@@ -344,79 +470,203 @@
       });
 
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`Could not load content list.`);
+        // Keep this generic (no "GitHub" messaging on UI)
+        throw new Error("Could not load items.");
       }
       return res.json();
     }
 
-    async function listAllFiles({ owner, repo, branch, startPath }) {
-      const files = [];
-      const queue = [startPath || ""];
+    async function scanRepo({ owner, repo, branch, startPath }) {
+      dirChildren.clear();
+      allFiles = [];
+      allDirs = new Set();
+      galleryDirs = new Set();
+      galleryThumb = new Map();
+      childDirMap = new Map();
+
+      const queue = [normalizeDir(startPath || "")]; // "" means repo root
 
       while (queue.length) {
         const dir = queue.shift();
+        allDirs.add(dir);
+
         const items = await fetchDirContents(owner, repo, dir, branch);
         if (!Array.isArray(items)) continue;
 
+        dirChildren.set(dir, items);
+
+        // Track child directories for navigation
+        if (!childDirMap.has(dir)) childDirMap.set(dir, new Set());
+
+        // Determine if THIS folder is an image-only folder (direct children)
+        let hasAny = false;
+        let imageOnly = true;
+        let firstImage = "";
+
         for (const item of items) {
-          if (item.type === "dir") queue.push(item.path);
+          if (item.type === "dir") {
+            imageOnly = false; // folder contains a subfolder -> not a pure image gallery (simple rule)
+            queue.push(item.path);
+            childDirMap.get(dir).add(item.path);
+            continue;
+          }
+
           if (item.type === "file") {
-            files.push({ path: item.path, name: item.name, size: item.size });
+            hasAny = true;
+            allFiles.push({ path: item.path, name: item.name, size: item.size });
+
+            if (!isImagePath(item.path)) {
+              imageOnly = false;
+            } else if (!firstImage) {
+              firstImage = item.path;
+            }
           }
         }
+
+        if (hasAny && imageOnly) {
+          galleryDirs.add(dir);
+          if (firstImage) galleryThumb.set(dir, firstImage);
+        }
       }
-      return files;
     }
 
-    function render(files, basePath) {
+    // ---------- Data helpers ----------
+    function isInGallery(filePath) {
+      // exclude images that belong to any image-only folder
+      for (const g of galleryDirs) {
+        if (!g) continue;
+        if (filePath.startsWith(g + "/")) return true;
+      }
+      return false;
+    }
+
+    function getDirectChildren(dirPath) {
+      const dir = normalizeDir(dirPath);
+      const items = dirChildren.get(dir) || [];
+      // Filter out hidden/system stuff if needed
+      return items.filter(it => it.type === "dir" || (it.type === "file" && !HIDE_FILES.has(it.name)));
+    }
+
+    function getGalleryImages(dirPath) {
+      const dir = normalizeDir(dirPath);
+      const items = dirChildren.get(dir) || [];
+      return items
+        .filter(it => it.type === "file" && isImagePath(it.path))
+        .map(it => it.path)
+        .sort((a,b) => a.localeCompare(b));
+    }
+
+    function buildBreadcrumb(dirPath) {
+      const dir = normalizeDir(dirPath);
+      const parts = dir ? dir.split("/") : [];
+      const crumbs = [{ label: "Home", path: "" }];
+
+      let acc = "";
+      for (const part of parts) {
+        acc = acc ? acc + "/" + part : part;
+        crumbs.push({ label: part, path: acc });
+      }
+      return crumbs;
+    }
+
+    // ---------- Rendering ----------
+    function setCount(n) {
+      countChip.textContent = `${n} item${n === 1 ? "" : "s"}`;
+    }
+
+    function renderBreadcrumbs(dirPath) {
+      const list = buildBreadcrumb(dirPath);
+
+      crumbs.innerHTML = "";
+      for (let i = 0; i < list.length; i++) {
+        const c = list[i];
+        const btn = document.createElement("button");
+        btn.textContent = c.label;
+        btn.addEventListener("click", () => setRoutePath(c.path));
+        crumbs.appendChild(btn);
+      }
+    }
+
+    function renderGrid(items) {
+      grid.innerHTML = "";
+      gallery.style.display = "none";
+      grid.style.display = "grid";
+
       const q = (search.value || "").trim().toLowerCase();
 
-      // Hide this landing page itself by default
-      const visible = files.filter(f => f.path !== "index.html");
-
-      const filtered = !q ? visible : visible.filter(f =>
-        f.path.toLowerCase().includes(q) || f.name.toLowerCase().includes(q)
+      const filtered = !q ? items : items.filter(it =>
+        (it.title || "").toLowerCase().includes(q) ||
+        (it.subtitle || "").toLowerCase().includes(q)
       );
 
-      countChip.textContent = `${filtered.length} item${filtered.length === 1 ? "" : "s"}`;
-
-      grid.innerHTML = "";
+      setCount(filtered.length);
       emptyBox.style.display = filtered.length ? "none" : "block";
 
       const frag = document.createDocumentFragment();
 
-      for (const f of filtered) {
+      for (const it of filtered) {
+        // Folder / Gallery cards use <button> to avoid messing with querystring navigation
+        if (it.kind === "folder" || it.kind === "gallery") {
+          const b = document.createElement("button");
+          b.className = "card";
+          b.type = "button";
+          b.addEventListener("click", () => setRoutePath(it.path));
+
+          b.innerHTML = `
+            <div class="top">
+              <div class="badge folder">${it.kind === "gallery" ? "📷" : "📁"}</div>
+              <div class="meta">
+                <div class="name" title="${it.title}">${it.title}</div>
+                <div class="path" title="${it.subtitle}">${it.subtitle}</div>
+                <div class="tags">
+                  <span class="tag">${it.kind === "gallery" ? "gallery" : "folder"}</span>
+                  ${it.countTag ? `<span class="tag">${it.countTag}</span>` : ""}
+                </div>
+              </div>
+            </div>
+            <div class="thumb"></div>
+          `;
+
+          if (it.thumb) {
+            const thumb = b.querySelector(".thumb");
+            thumb.style.display = "block";
+            const img = document.createElement("img");
+            img.loading = "lazy";
+            img.src = buildPagesLink(ctx.basePath, it.thumb);
+            img.alt = it.title;
+            thumb.appendChild(img);
+          }
+
+          frag.appendChild(b);
+          continue;
+        }
+
+        // File cards use <a> to open the file
         const a = document.createElement("a");
         a.className = "card";
-        a.href = buildPagesLink(basePath, f.path);
-
-        const ext = extOf(f.path);
-        const sizeStr = formatBytes(f.size);
+        a.href = it.href;
 
         a.innerHTML = `
           <div class="top">
-            <div class="badge">${iconTextFor(f.path)}</div>
+            <div class="badge">${it.badge}</div>
             <div class="meta">
-              <div class="name" title="${f.name}">${f.name}</div>
-              <div class="path" title="${f.path}">${f.path}</div>
+              <div class="name" title="${it.title}">${it.title}</div>
+              <div class="path" title="${it.subtitle}">${it.subtitle}</div>
               <div class="tags">
-                <span class="tag">${ext ? "." + ext : "file"}</span>
-                ${sizeStr ? `<span class="tag">${sizeStr}</span>` : ``}
+                ${it.tagsHtml || ""}
               </div>
             </div>
           </div>
           <div class="thumb"></div>
         `;
 
-        // Optional image thumbnails
-        if (isThumbableImage(f.path)) {
+        if (it.thumb) {
           const thumb = a.querySelector(".thumb");
           thumb.style.display = "block";
           const img = document.createElement("img");
           img.loading = "lazy";
-          img.src = buildPagesLink(basePath, f.path);
-          img.alt = f.name;
+          img.src = it.thumb;
+          img.alt = it.title;
           thumb.appendChild(img);
         }
 
@@ -426,8 +676,215 @@
       grid.appendChild(frag);
     }
 
+    function renderGallery(dirPath) {
+      grid.style.display = "none";
+      gallery.style.display = "flex";
+      gallery.innerHTML = "";
+
+      const images = getGalleryImages(dirPath);
+      setCount(images.length);
+      emptyBox.style.display = images.length ? "none" : "block";
+
+      const frag = document.createDocumentFragment();
+
+      for (const imgPath of images) {
+        const wrap = document.createElement("div");
+        wrap.className = "galleryItem";
+
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.src = buildPagesLink(ctx.basePath, imgPath);
+        img.alt = imgPath.split("/").pop() || "image";
+
+        const cap = document.createElement("div");
+        cap.className = "galleryCaption";
+
+        const left = document.createElement("div");
+        left.textContent = imgPath.split("/").pop() || imgPath;
+
+        const open = document.createElement("a");
+        open.href = buildPagesLink(ctx.basePath, imgPath);
+        open.target = "_blank";
+        open.rel = "noopener";
+        open.textContent = "Open";
+
+        cap.appendChild(left);
+        cap.appendChild(open);
+
+        wrap.appendChild(img);
+        wrap.appendChild(cap);
+
+        frag.appendChild(wrap);
+      }
+
+      gallery.appendChild(frag);
+    }
+
+    function buildRootItems() {
+      // show gallery folders (image-only dirs), then top-level folders, then files (excluding gallery-contained images)
+      const items = [];
+
+      // Gallery folders
+      const galleries = Array.from(galleryDirs)
+        .filter(d => d !== normalizeDir(CONFIG.startPath || "")) // don’t convert site root into a gallery automatically
+        .sort((a,b) => a.localeCompare(b));
+
+      for (const d of galleries) {
+        const imgs = getGalleryImages(d);
+        items.push({
+          kind: "gallery",
+          path: d,
+          title: labelForDir(d),
+          subtitle: d || "",
+          thumb: galleryThumb.get(d) || "",
+          countTag: `${imgs.length} photo${imgs.length === 1 ? "" : "s"}`
+        });
+      }
+
+      // Top-level folders (depth 1), excluding ones already shown as galleries
+      const topDirs = Array.from(allDirs)
+        .filter(d => d && d.split("/").length === 1)
+        .filter(d => !galleryDirs.has(d))
+        .sort((a,b) => a.localeCompare(b));
+
+      for (const d of topDirs) {
+        items.push({
+          kind: "folder",
+          path: d,
+          title: labelForDir(d),
+          subtitle: d,
+          thumb: ""
+        });
+      }
+
+      // Files (across repo), excluding:
+      // - index.html
+      // - any file inside a gallery folder (to avoid a million image cards)
+      const fileCards = allFiles
+        .filter(f => !HIDE_FILES.has(f.name))
+        .filter(f => !isInGallery(f.path))
+        .sort((a,b) => a.path.localeCompare(b.path))
+        .map(f => {
+          const ext = extOf(f.path);
+          const sizeStr = formatBytes(f.size);
+          const href = buildPagesLink(ctx.basePath, f.path);
+
+          const tags = [];
+          if (ext) tags.push(`<span class="tag">.${ext}</span>`);
+          if (sizeStr) tags.push(`<span class="tag">${sizeStr}</span>`);
+
+          // Optional thumbnails for image files (outside galleries)
+          let thumb = "";
+          if (isImagePath(f.path)) thumb = href;
+
+          return {
+            kind: "file",
+            title: f.name,
+            subtitle: f.path,
+            href,
+            badge: iconTextForFile(f.path),
+            tagsHtml: tags.join(""),
+            thumb
+          };
+        });
+
+      items.push(...fileCards);
+      return items;
+    }
+
+    function buildFolderItems(dirPath) {
+      const dir = normalizeDir(dirPath);
+      const kids = getDirectChildren(dir);
+
+      // show subfolders first, then files
+      const subfolders = kids
+        .filter(it => it.type === "dir")
+        .map(it => {
+          const isGallery = galleryDirs.has(it.path);
+          const thumb = isGallery ? (galleryThumb.get(it.path) || "") : "";
+          const count = isGallery ? getGalleryImages(it.path).length : null;
+
+          return {
+            kind: isGallery ? "gallery" : "folder",
+            path: it.path,
+            title: labelForDir(it.path),
+            subtitle: it.path,
+            thumb,
+            countTag: (isGallery && count != null) ? `${count} photo${count === 1 ? "" : "s"}` : ""
+          };
+        })
+        .sort((a,b) => a.title.localeCompare(b.title));
+
+      const files = kids
+        .filter(it => it.type === "file")
+        .filter(it => !HIDE_FILES.has(it.name))
+        .map(it => {
+          const ext = extOf(it.path);
+          const sizeStr = formatBytes(it.size);
+          const href = buildPagesLink(ctx.basePath, it.path);
+
+          const tags = [];
+          if (ext) tags.push(`<span class="tag">.${ext}</span>`);
+          if (sizeStr) tags.push(`<span class="tag">${sizeStr}</span>`);
+
+          let thumb = "";
+          if (isImagePath(it.path)) thumb = href;
+
+          return {
+            kind: "file",
+            title: it.name,
+            subtitle: it.path,
+            href,
+            badge: iconTextForFile(it.path),
+            tagsHtml: tags.join(""),
+            thumb
+          };
+        })
+        .sort((a,b) => a.title.localeCompare(b.title));
+
+      return [...subfolders, ...files];
+    }
+
+    function renderRoute() {
+      const qp = getQueryParams();
+      const currentPath = normalizeDir(qp.p || "");
+
+      renderBreadcrumbs(currentPath);
+
+      // UI header changes
+      if (!currentPath) {
+        pageTitle.textContent = "Portfolio";
+        tagline.textContent = "Click anything to open it. Image folders become scrollable galleries.";
+      } else {
+        pageTitle.textContent = labelForDir(currentPath);
+        tagline.textContent = galleryDirs.has(currentPath)
+          ? "Scroll through the photos in this folder."
+          : "Browse this folder.";
+      }
+
+      // gallery mode if folder is image-only
+      if (currentPath && galleryDirs.has(currentPath)) {
+        renderGallery(currentPath);
+        return;
+      }
+
+      // folder mode (non-gallery)
+      if (currentPath) {
+        const items = buildFolderItems(currentPath);
+        renderGrid(items);
+        return;
+      }
+
+      // root mode
+      const rootItems = buildRootItems();
+      renderGrid(rootItems);
+    }
+
+    // ---------- Boot ----------
     (async function main() {
       try {
+        statusText.textContent = "Building your portfolio…";
+
         const qp = getQueryParams();
         const detected = detectPagesContext();
 
@@ -438,21 +895,21 @@
         const basePath = detected.basePath || "/";
 
         if (!owner || !repo) {
-          statusText.textContent = "Nothing to show yet.";
           statusBox.style.display = "none";
           emptyBox.style.display = "block";
-          emptyBox.textContent = "Repository source not configured.";
+          emptyBox.textContent = "Source not configured.";
           return;
         }
 
-        statusText.textContent = "Building gallery…";
-        const files = await listAllFiles({ owner, repo, branch, startPath });
-        files.sort((a,b) => a.path.localeCompare(b.path));
+        ctx = { owner, repo, branch, startPath, basePath };
+
+        await scanRepo(ctx);
 
         statusBox.style.display = "none";
-        render(files, basePath);
+        renderRoute();
 
-        search.addEventListener("input", () => render(files, basePath));
+        search.addEventListener("input", () => renderRoute());
+        window.addEventListener("popstate", () => renderRoute());
       } catch (e) {
         console.error(e);
         statusText.textContent = "Couldn’t load items.";
