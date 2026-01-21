@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INHALT – 1:1 Copy</title>
+
+  <!-- Fonts (you can swap these if you know the exact original fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg: #ff85c9;         /* pink background */
+      --cyan: #83f0ff;       /* main text fill */
+      --cyan-stroke: #29b4c7;/* outline */
+      --black: #000000;      /* shadow */
+    }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      background:#111; /* outside frame (browser background) */
+    }
+
+    /* Keeps the exact 4:3 “page” shape like the PDF */
+    .frame{
+      width:min(96vw, calc(96vh * 4/3));
+      aspect-ratio: 4 / 3;
+      background: var(--bg);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      overflow:hidden;
+      border-radius: 2px;
+    }
+
+    svg{
+      width:100%;
+      height:100%;
+      display:block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="frame">
+    <svg viewBox="0 0 1024 768" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="INHALT">
+      <!-- Background -->
+      <rect width="1024" height="768" fill="var(--bg)"/>
+
+      <!-- Shadow filter for the list text -->
+      <defs>
+        <filter id="hardShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <!-- sharp black shadow -->
+          <feDropShadow dx="6" dy="6" stdDeviation="0" flood-color="var(--black)" flood-opacity="1"/>
+        </filter>
+      </defs>
+
+      <!-- Big title -->
+      <text
+        x="32"
+        y="250"
+        font-family="Anton, Impact, Arial Black, sans-serif"
+        font-size="300"
+        letter-spacing="-6"
+        fill="#ffffff"
+      >
+        INHALT
+      </text>
+
+      <!-- List block -->
+      <g
+        font-family="Oswald, Arial Black, sans-serif"
+        font-weight="700"
+        font-size="56"
+        filter="url(#hardShadow)"
+      >
+        <!-- Each line uses stroke + fill to mimic the PDF outlined cyan look -->
+        <text x="485" y="345" fill="var(--cyan)" stroke="var(--cyan-stroke)" stroke-width="6" paint-order="stroke fill">
+          3.-4. VERSITILE KNIT TOP
+        </text>
+
+        <text x="485" y="410" fill="var(--cyan)" stroke="var(--cyan-stroke)" stroke-width="6" paint-order="stroke fill">
+          5.-8. PAULA CAROLINA „ICH WAR HIER“
+        </text>
+
+        <text x="485" y="475" fill="var(--cyan)" stroke="var(--cyan-stroke)" stroke-width="6" paint-order="stroke fill">
+          9.-11 NEKTAR UND AMBROSIA
+        </text>
+
+        <text x="485" y="540" fill="var(--cyan)" stroke="var(--cyan-stroke)" stroke-width="6" paint-order="stroke fill">
+          12.-18. FOTOGRAFIEN
+        </text>
+
+        <text x="485" y="605" fill="var(--cyan)" stroke="var(--cyan-stroke)" stroke-width="6" paint-order="stroke fill">
+          19.-23. STRICK DESIGNS
+        </text>
+
+        <text x="485" y="670" fill="var(--cyan)" stroke="var(--cyan-stroke)" stroke-width="6" paint-order="stroke fill">
+          24. AQUARELL SKIZZE
+        </text>
+
+        <text x="485" y="735" fill="var(--cyan)" stroke="var(--cyan-stroke)" stroke-width="6" paint-order="stroke fill">
+          25.-26. PINA BAUSCH 3D BÜHNENBILD
+        </text>
+      </g>
+    </svg>
+  </div>
+</body>
+</html>
