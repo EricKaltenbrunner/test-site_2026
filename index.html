@@ -18,6 +18,7 @@
       --radius: 18px;
     }
     *{box-sizing:border-box}
+    html, body { height: 100%; }
     body{
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -145,7 +146,7 @@
       color: var(--muted);
       font-size: 12px;
     }
-    .crumbs button, .crumbs a{
+    .crumbs button{
       border: 1px solid var(--border);
       background: rgba(255,255,255,0.03);
       color: var(--muted);
@@ -155,11 +156,12 @@
       text-decoration:none;
       font-size: 12px;
     }
-    .crumbs button:hover, .crumbs a:hover{
+    .crumbs button:hover{
       color: var(--text);
       border-color: rgba(125,211,252,0.25);
     }
 
+    /* Grid (folders + files) */
     .grid{
       display:grid;
       grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -180,8 +182,6 @@
       gap: 10px;
       transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
       min-height: 110px;
-      position: relative;
-      overflow:hidden;
       cursor:pointer;
       color: inherit;
       text-align:left;
@@ -251,7 +251,6 @@
       color: rgba(238,242,255,0.78);
     }
 
-    /* Thumbnail (used for galleries + images) */
     .thumb{
       margin-top: 2px;
       border-radius: 14px;
@@ -268,44 +267,23 @@
       display:block;
     }
 
-    /* Gallery view */
+    /* ✅ Portfolio Gallery Mode (seamless scroll) */
     .gallery{
-      margin-top: 12px;
+      margin-top: 14px;
       display:flex;
       flex-direction:column;
-      gap: 14px;
+      gap: 0;            /* no vertical gaps */
     }
-    .galleryItem{
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: rgba(255,255,255,0.03);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .galleryItem img{
+    .gallery img{
       width:100%;
-      display:block;
       height:auto;
-    }
-    .galleryCaption{
-      display:flex;
-      justify-content:space-between;
-      gap: 12px;
-      padding: 10px 12px;
-      color: var(--muted);
-      font-size: 12px;
-      align-items:center;
-    }
-    .galleryCaption a{
-      color: var(--muted);
-      text-decoration:none;
-      border: 1px solid var(--border);
-      padding: 6px 8px;
-      border-radius: 999px;
-    }
-    .galleryCaption a:hover{
-      color: var(--text);
-      border-color: rgba(125,211,252,0.25);
+      display:block;      /* removes inline gaps */
+      margin:0;
+      padding:0;
+      border:0;
+      border-radius: 0;   /* seamless edges */
+      box-shadow:none;
+      background: transparent;
     }
 
     .empty{
@@ -351,19 +329,15 @@
   </div>
 
   <script>
-    /**
-     * If you use a custom domain and auto-detection fails,
-     * set these (or use query params owner/repo/branch/startPath).
-     */
     const CONFIG = {
       owner: "",
       repo: "",
       branch: "",
-      startPath: "" // scan from this subfolder ("" = repo root)
+      startPath: ""
     };
 
     const IMAGE_EXTS = new Set(["png","jpg","jpeg","webp","gif","svg","avif"]);
-    const HIDE_FILES = new Set(["index.html"]); // keep landing page out of the grid
+    const HIDE_FILES = new Set(["index.html"]);
 
     const $ = (id) => document.getElementById(id);
 
@@ -378,16 +352,13 @@
     const pageTitle = $("pageTitle");
     const tagline = $("tagline");
 
-    // State
-    let ctx = null;                     // { owner, repo, branch, startPath, basePath }
-    let dirChildren = new Map();        // dirPath -> [items from GitHub contents API]
-    let allFiles = [];                  // {path,name,size}
-    let allDirs = new Set();            // all dir paths discovered
-    let galleryDirs = new Set();        // dir paths that contain ONLY images (direct children)
-    let galleryThumb = new Map();       // dirPath -> imagePath (for preview)
-    let childDirMap = new Map();        // dirPath -> Set(childDirPath)
+    let ctx = null;
+    let dirChildren = new Map();
+    let allFiles = [];
+    let allDirs = new Set();
+    let galleryDirs = new Set();
+    let galleryThumb = new Map();
 
-    // ---------- Utility ----------
     function getQueryParams() {
       const p = new URLSearchParams(location.search);
       return {
@@ -395,7 +366,7 @@
         repo: p.get("repo") || "",
         branch: p.get("branch") || "",
         startPath: p.get("startPath") || "",
-        p: p.get("p") || "" // navigation path
+        p: p.get("p") || ""
       };
     }
 
@@ -405,12 +376,11 @@
       else url.searchParams.delete("p");
       history.pushState({}, "", url.toString());
       renderRoute();
+      // nice touch: jump to top when entering a gallery/folder
+      window.scrollTo({ top: 0, behavior: "instant" });
     }
 
     function detectPagesContext() {
-      // github.io only:
-      // - https://OWNER.github.io/        -> repo = OWNER/OWNER.github.io
-      // - https://OWNER.github.io/REPO/   -> repo = OWNER/REPO
       const host = location.hostname;
       if (!host.endsWith("github.io")) return { owner:"", repo:"", basePath:"/" };
 
@@ -419,6 +389,10 @@
       const repo = firstSeg ? firstSeg : `${owner}.github.io`;
       const basePath = firstSeg ? `/${firstSeg}/` : `/`;
       return { owner, repo, basePath };
+    }
+
+    function normalizeDir(p) {
+      return (p || "").replace(/^\/+/, "").replace(/\/+$/, "");
     }
 
     function extOf(path) {
@@ -455,11 +429,6 @@
       return parts.length ? parts[parts.length - 1] : "Home";
     }
 
-    function normalizeDir(p) {
-      return (p || "").replace(/^\/+/, "").replace(/\/+$/, "");
-    }
-
-    // ---------- GitHub scanning ----------
     async function fetchDirContents(owner, repo, path, branch) {
       const enc = encodeURIComponent(path).replaceAll("%2F", "/");
       const url = new URL(`https://api.github.com/repos/${owner}/${repo}/contents/${enc}`);
@@ -469,10 +438,7 @@
         headers: { "Accept": "application/vnd.github+json" }
       });
 
-      if (!res.ok) {
-        // Keep this generic (no "GitHub" messaging on UI)
-        throw new Error("Could not load items.");
-      }
+      if (!res.ok) throw new Error("Could not load items.");
       return res.json();
     }
 
@@ -482,9 +448,8 @@
       allDirs = new Set();
       galleryDirs = new Set();
       galleryThumb = new Map();
-      childDirMap = new Map();
 
-      const queue = [normalizeDir(startPath || "")]; // "" means repo root
+      const queue = [normalizeDir(startPath || "")];
 
       while (queue.length) {
         const dir = queue.shift();
@@ -495,19 +460,14 @@
 
         dirChildren.set(dir, items);
 
-        // Track child directories for navigation
-        if (!childDirMap.has(dir)) childDirMap.set(dir, new Set());
-
-        // Determine if THIS folder is an image-only folder (direct children)
         let hasAny = false;
         let imageOnly = true;
         let firstImage = "";
 
         for (const item of items) {
           if (item.type === "dir") {
-            imageOnly = false; // folder contains a subfolder -> not a pure image gallery (simple rule)
+            imageOnly = false;
             queue.push(item.path);
-            childDirMap.get(dir).add(item.path);
             continue;
           }
 
@@ -515,11 +475,8 @@
             hasAny = true;
             allFiles.push({ path: item.path, name: item.name, size: item.size });
 
-            if (!isImagePath(item.path)) {
-              imageOnly = false;
-            } else if (!firstImage) {
-              firstImage = item.path;
-            }
+            if (!isImagePath(item.path)) imageOnly = false;
+            else if (!firstImage) firstImage = item.path;
           }
         }
 
@@ -530,9 +487,7 @@
       }
     }
 
-    // ---------- Data helpers ----------
     function isInGallery(filePath) {
-      // exclude images that belong to any image-only folder
       for (const g of galleryDirs) {
         if (!g) continue;
         if (filePath.startsWith(g + "/")) return true;
@@ -543,7 +498,6 @@
     function getDirectChildren(dirPath) {
       const dir = normalizeDir(dirPath);
       const items = dirChildren.get(dir) || [];
-      // Filter out hidden/system stuff if needed
       return items.filter(it => it.type === "dir" || (it.type === "file" && !HIDE_FILES.has(it.name)));
     }
 
@@ -559,27 +513,24 @@
     function buildBreadcrumb(dirPath) {
       const dir = normalizeDir(dirPath);
       const parts = dir ? dir.split("/") : [];
-      const crumbs = [{ label: "Home", path: "" }];
+      const out = [{ label: "Home", path: "" }];
 
       let acc = "";
       for (const part of parts) {
         acc = acc ? acc + "/" + part : part;
-        crumbs.push({ label: part, path: acc });
+        out.push({ label: part, path: acc });
       }
-      return crumbs;
+      return out;
     }
 
-    // ---------- Rendering ----------
     function setCount(n) {
       countChip.textContent = `${n} item${n === 1 ? "" : "s"}`;
     }
 
     function renderBreadcrumbs(dirPath) {
       const list = buildBreadcrumb(dirPath);
-
       crumbs.innerHTML = "";
-      for (let i = 0; i < list.length; i++) {
-        const c = list[i];
+      for (const c of list) {
         const btn = document.createElement("button");
         btn.textContent = c.label;
         btn.addEventListener("click", () => setRoutePath(c.path));
@@ -605,7 +556,6 @@
       const frag = document.createDocumentFragment();
 
       for (const it of filtered) {
-        // Folder / Gallery cards use <button> to avoid messing with querystring navigation
         if (it.kind === "folder" || it.kind === "gallery") {
           const b = document.createElement("button");
           b.className = "card";
@@ -641,7 +591,6 @@
           continue;
         }
 
-        // File cards use <a> to open the file
         const a = document.createElement("a");
         a.className = "card";
         a.href = it.href;
@@ -652,9 +601,7 @@
             <div class="meta">
               <div class="name" title="${it.title}">${it.title}</div>
               <div class="path" title="${it.subtitle}">${it.subtitle}</div>
-              <div class="tags">
-                ${it.tagsHtml || ""}
-              </div>
+              <div class="tags">${it.tagsHtml || ""}</div>
             </div>
           </div>
           <div class="thumb"></div>
@@ -676,6 +623,7 @@
       grid.appendChild(frag);
     }
 
+    /* ✅ Seamless gallery: just images, no frames, no captions, no open button */
     function renderGallery(dirPath) {
       grid.style.display = "none";
       gallery.style.display = "flex";
@@ -688,45 +636,21 @@
       const frag = document.createDocumentFragment();
 
       for (const imgPath of images) {
-        const wrap = document.createElement("div");
-        wrap.className = "galleryItem";
-
         const img = document.createElement("img");
         img.loading = "lazy";
         img.src = buildPagesLink(ctx.basePath, imgPath);
         img.alt = imgPath.split("/").pop() || "image";
-
-        const cap = document.createElement("div");
-        cap.className = "galleryCaption";
-
-        const left = document.createElement("div");
-        left.textContent = imgPath.split("/").pop() || imgPath;
-
-        const open = document.createElement("a");
-        open.href = buildPagesLink(ctx.basePath, imgPath);
-        open.target = "_blank";
-        open.rel = "noopener";
-        open.textContent = "Open";
-
-        cap.appendChild(left);
-        cap.appendChild(open);
-
-        wrap.appendChild(img);
-        wrap.appendChild(cap);
-
-        frag.appendChild(wrap);
+        frag.appendChild(img);
       }
 
       gallery.appendChild(frag);
     }
 
     function buildRootItems() {
-      // show gallery folders (image-only dirs), then top-level folders, then files (excluding gallery-contained images)
       const items = [];
 
-      // Gallery folders
       const galleries = Array.from(galleryDirs)
-        .filter(d => d !== normalizeDir(CONFIG.startPath || "")) // don’t convert site root into a gallery automatically
+        .filter(d => d !== normalizeDir(CONFIG.startPath || ""))
         .sort((a,b) => a.localeCompare(b));
 
       for (const d of galleries) {
@@ -741,7 +665,6 @@
         });
       }
 
-      // Top-level folders (depth 1), excluding ones already shown as galleries
       const topDirs = Array.from(allDirs)
         .filter(d => d && d.split("/").length === 1)
         .filter(d => !galleryDirs.has(d))
@@ -757,9 +680,6 @@
         });
       }
 
-      // Files (across repo), excluding:
-      // - index.html
-      // - any file inside a gallery folder (to avoid a million image cards)
       const fileCards = allFiles
         .filter(f => !HIDE_FILES.has(f.name))
         .filter(f => !isInGallery(f.path))
@@ -773,7 +693,6 @@
           if (ext) tags.push(`<span class="tag">.${ext}</span>`);
           if (sizeStr) tags.push(`<span class="tag">${sizeStr}</span>`);
 
-          // Optional thumbnails for image files (outside galleries)
           let thumb = "";
           if (isImagePath(f.path)) thumb = href;
 
@@ -796,7 +715,6 @@
       const dir = normalizeDir(dirPath);
       const kids = getDirectChildren(dir);
 
-      // show subfolders first, then files
       const subfolders = kids
         .filter(it => it.type === "dir")
         .map(it => {
@@ -851,24 +769,23 @@
 
       renderBreadcrumbs(currentPath);
 
-      // UI header changes
       if (!currentPath) {
         pageTitle.textContent = "Portfolio";
         tagline.textContent = "Click anything to open it. Image folders become scrollable galleries.";
       } else {
         pageTitle.textContent = labelForDir(currentPath);
         tagline.textContent = galleryDirs.has(currentPath)
-          ? "Scroll through the photos in this folder."
+          ? "A seamless scroll through this series."
           : "Browse this folder.";
       }
 
-      // gallery mode if folder is image-only
+      // ✅ gallery mode
       if (currentPath && galleryDirs.has(currentPath)) {
         renderGallery(currentPath);
         return;
       }
 
-      // folder mode (non-gallery)
+      // folder mode
       if (currentPath) {
         const items = buildFolderItems(currentPath);
         renderGrid(items);
@@ -880,7 +797,6 @@
       renderGrid(rootItems);
     }
 
-    // ---------- Boot ----------
     (async function main() {
       try {
         statusText.textContent = "Building your portfolio…";
@@ -902,7 +818,6 @@
         }
 
         ctx = { owner, repo, branch, startPath, basePath };
-
         await scanRepo(ctx);
 
         statusBox.style.display = "none";
