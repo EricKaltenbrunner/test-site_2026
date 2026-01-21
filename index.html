@@ -3,214 +3,283 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Repo File Grid</title>
+  <title>Portfolio</title>
   <style>
-    :root {
-      --bg: #0b0d10;
-      --panel: #12151b;
-      --text: #e9eef7;
-      --muted: #aab6c8;
+    :root{
+      --bg:#07090d;
+      --panel: rgba(255,255,255,0.04);
       --border: rgba(255,255,255,0.10);
-      --accent: #5eead4;
+      --text:#eef2ff;
+      --muted: rgba(238,242,255,0.70);
+      --accent: #7dd3fc;
+      --accent2:#a78bfa;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      --radius: 18px;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
+    *{box-sizing:border-box}
+    body{
+      margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: radial-gradient(1200px 800px at 10% 0%, #0f172a 0%, var(--bg) 55%);
-      color: var(--text);
+      color:var(--text);
+      background:
+        radial-gradient(900px 600px at 20% 0%, rgba(125,211,252,0.16), transparent 60%),
+        radial-gradient(900px 600px at 80% 10%, rgba(167,139,250,0.16), transparent 65%),
+        var(--bg);
     }
-    header {
-      padding: 28px 18px 18px;
+
+    .wrap{
       max-width: 1100px;
       margin: 0 auto;
+      padding: 28px 18px 36px;
     }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 20px;
-      letter-spacing: 0.2px;
-    }
-    .sub {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.35;
-    }
-    .bar {
-      display: flex;
+
+    header{
+      padding: 14px 0 18px;
+      display:flex;
+      flex-direction:column;
       gap: 10px;
-      margin-top: 14px;
-      align-items: center;
-      flex-wrap: wrap;
     }
-    input[type="search"] {
+
+    .titleRow{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 16px;
+      flex-wrap:wrap;
+    }
+
+    h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing: 0.3px;
+      line-height: 1.1;
+    }
+    .tagline{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.4;
+      max-width: 70ch;
+    }
+
+    .controls{
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top: 6px;
+    }
+
+    .search{
       flex: 1 1 260px;
+      padding: 12px 14px;
+      border-radius: 999px;
       border: 1px solid var(--border);
-      background: rgba(18,21,27,0.75);
+      background: rgba(255,255,255,0.03);
       color: var(--text);
-      padding: 10px 12px;
-      border-radius: 12px;
       outline: none;
+      backdrop-filter: blur(8px);
     }
-    input[type="search"]::placeholder { color: rgba(170,182,200,0.7); }
-    .pill {
+    .search::placeholder{ color: rgba(238,242,255,0.45); }
+
+    .chip{
       font-size: 12px;
-      border: 1px solid var(--border);
-      background: rgba(18,21,27,0.55);
       padding: 8px 10px;
       border-radius: 999px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    main {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 18px 30px;
-    }
-
-    .status {
-      border: 1px solid var(--border);
-      background: rgba(18,21,27,0.55);
-      padding: 14px 14px;
-      border-radius: 14px;
-      color: var(--muted);
-      font-size: 14px;
-      margin-top: 10px;
-    }
-    .status strong { color: var(--text); }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    a.card {
-      text-decoration: none;
-      border: 1px solid var(--border);
-      background: rgba(18,21,27,0.65);
-      border-radius: 16px;
-      padding: 14px;
-      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
-      display: grid;
-      gap: 8px;
-      min-height: 92px;
-    }
-    a.card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(94,234,212,0.45);
-      background: rgba(18,21,27,0.82);
-    }
-
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
       border: 1px solid var(--border);
       background: rgba(255,255,255,0.03);
-      flex: 0 0 auto;
+      color: var(--muted);
+      user-select:none;
+    }
+
+    .status{
+      margin-top: 12px;
+      padding: 14px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      color: var(--muted);
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+    .dot{
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(125,211,252,0.9);
+      box-shadow: 0 0 18px rgba(125,211,252,0.6);
+      flex:0 0 auto;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%,100%{ transform: scale(0.9); opacity:0.65; }
+      50%{ transform: scale(1.1); opacity:1; }
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    a.card{
+      text-decoration:none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.03);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 14px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+      min-height: 110px;
+      position: relative;
+      overflow:hidden;
+    }
+    a.card:hover{
+      transform: translateY(-2px);
+      border-color: rgba(125,211,252,0.35);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .top{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width:0;
+    }
+
+    .badge{
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      display:grid;
+      place-items:center;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
       color: var(--accent);
       font-weight: 700;
-      letter-spacing: 0.4px;
+      letter-spacing: .5px;
+      flex: 0 0 auto;
     }
 
-    .name {
+    .meta{
+      min-width:0;
+      flex:1;
+    }
+
+    .name{
       font-size: 14px;
+      font-weight: 650;
       color: var(--text);
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
-    .path {
-      color: var(--muted);
+    .path{
       font-size: 12px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .meta {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+      color: var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
       margin-top: 2px;
     }
-    .tag {
+
+    .tags{
+      display:flex;
+      gap: 8px;
+      flex-wrap:wrap;
+      margin-top: 2px;
+    }
+    .tag{
       font-size: 11px;
-      color: rgba(233,238,247,0.85);
-      border: 1px solid var(--border);
-      border-radius: 999px;
       padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.10);
       background: rgba(255,255,255,0.03);
+      color: rgba(238,242,255,0.78);
     }
 
-    footer {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 10px 18px 26px;
-      color: var(--muted);
-      font-size: 12px;
+    /* image thumbnail support (optional) */
+    .thumb{
+      margin-top: 2px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      overflow:hidden;
+      background: rgba(0,0,0,0.25);
+      aspect-ratio: 16/9;
+      display:none;
     }
-    code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 12px;
-      color: rgba(233,238,247,0.9);
+    .thumb img{
+      width:100%;
+      height:100%;
+      object-fit: cover;
+      display:block;
+    }
+
+    .empty{
+      margin-top: 14px;
+      padding: 18px;
+      border-radius: var(--radius);
+      border: 1px dashed rgba(255,255,255,0.18);
+      color: var(--muted);
+      background: rgba(255,255,255,0.02);
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <h1>Files in this repo</h1>
-    <div class="sub" id="subtitle">Scanning…</div>
+  <div class="wrap">
+    <header>
+      <div class="titleRow">
+        <div>
+          <h1>Portfolio</h1>
+          <p class="tagline">A simple gallery of everything in this site. Click any card to open it.</p>
+        </div>
+      </div>
 
-    <div class="bar">
-      <input id="search" type="search" placeholder="Filter files by name or path…" />
-      <div class="pill" id="countPill">0 files</div>
-    </div>
-  </header>
+      <div class="controls">
+        <input id="search" class="search" type="search" placeholder="Search… (type to filter)" />
+        <div class="chip" id="countChip">0 items</div>
+      </div>
+    </header>
 
-  <main>
-    <div class="status" id="statusBox">
-      <strong>Status:</strong> Loading file list…
+    <div class="status" id="status">
+      <div class="dot"></div>
+      <div id="statusText">Loading…</div>
     </div>
 
     <div class="grid" id="grid"></div>
-  </main>
+    <div class="empty" id="empty" style="display:none;">No results.</div>
+  </div>
+
   <script>
     /**
-     * --- CONFIG (optional) ---
-     * Usually auto-detected for github.io pages.
-     * If you use a custom domain, set these OR use query params:
-     *   ?owner=...&repo=...&branch=main&startPath=
+     * Optional: If you use a custom domain and auto-detection fails,
+     * set these (or use query params owner/repo/branch/startPath).
      */
     const CONFIG = {
-      owner: "",      // e.g. "octocat"
-      repo: "",       // e.g. "my-pages-repo"
-      branch: "",     // e.g. "main"
-      startPath: ""   // scan from this subfolder ("" = root)
+      owner: "",
+      repo: "",
+      branch: "",
+      startPath: ""
     };
 
     const $ = (id) => document.getElementById(id);
 
-    const statusBox = $("statusBox");
     const grid = $("grid");
-    const subtitle = $("subtitle");
-    const countPill = $("countPill");
-    const repoPill = $("repoPill");
     const search = $("search");
+    const statusText = $("statusText");
+    const countChip = $("countChip");
+    const emptyBox = $("empty");
+    const statusBox = $("status");
 
-    // ---- Helpers ----
     function getQueryParams() {
       const p = new URLSearchParams(location.search);
       return {
@@ -221,19 +290,16 @@
       };
     }
 
-    function detectGitHubPagesRepo() {
-      // Typical:
-      // - User pages: https://OWNER.github.io/   -> repo = OWNER/OWNER.github.io
-      // - Project pages: https://OWNER.github.io/REPO/ -> repo = OWNER/REPO
-      const host = location.hostname; // owner.github.io
-      if (!host.endsWith("github.io")) return null;
+    function detectPagesContext() {
+      // Works for typical github.io hosting:
+      // - https://OWNER.github.io/        -> repo = OWNER/OWNER.github.io
+      // - https://OWNER.github.io/REPO/   -> repo = OWNER/REPO
+      const host = location.hostname;
+      if (!host.endsWith("github.io")) return { owner:"", repo:"", basePath:"/" };
 
       const owner = host.split(".")[0];
       const firstSeg = location.pathname.split("/").filter(Boolean)[0] || "";
       const repo = firstSeg ? firstSeg : `${owner}.github.io`;
-
-      // base path for links on Pages:
-      // project pages include "/REPO/", user pages are "/"
       const basePath = firstSeg ? `/${firstSeg}/` : `/`;
 
       return { owner, repo, basePath };
@@ -253,11 +319,20 @@
 
     function formatBytes(bytes) {
       if (typeof bytes !== "number") return "";
-      const units = ["B", "KB", "MB", "GB"];
-      let v = bytes;
-      let u = 0;
+      const units = ["B","KB","MB","GB"];
+      let v = bytes, u = 0;
       while (v >= 1024 && u < units.length - 1) { v /= 1024; u++; }
       return `${v.toFixed(v >= 10 || u === 0 ? 0 : 1)} ${units[u]}`;
+    }
+
+    function isThumbableImage(path){
+      const ext = extOf(path);
+      return ["png","jpg","jpeg","webp","gif","svg"].includes(ext);
+    }
+
+    function buildPagesLink(basePath, filePath) {
+      const cleanBase = basePath.endsWith("/") ? basePath : basePath + "/";
+      return cleanBase + filePath.split("/").map(encodeURIComponent).join("/");
     }
 
     async function fetchDirContents(owner, repo, path, branch) {
@@ -270,91 +345,80 @@
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(`GitHub API error (${res.status}) for "${path}": ${text || res.statusText}`);
+        throw new Error(`Could not load content list.`);
       }
       return res.json();
     }
 
     async function listAllFiles({ owner, repo, branch, startPath }) {
       const files = [];
-      const queue = [startPath || ""]; // directory paths to scan ("" = root)
+      const queue = [startPath || ""];
 
       while (queue.length) {
         const dir = queue.shift();
         const items = await fetchDirContents(owner, repo, dir, branch);
-
-        // "contents" API returns an array for directories, or a single object for files.
         if (!Array.isArray(items)) continue;
 
         for (const item of items) {
-          if (item.type === "dir") {
-            queue.push(item.path);
-          } else if (item.type === "file") {
-            files.push({
-              path: item.path,
-              name: item.name,
-              size: item.size
-            });
+          if (item.type === "dir") queue.push(item.path);
+          if (item.type === "file") {
+            files.push({ path: item.path, name: item.name, size: item.size });
           }
         }
       }
       return files;
     }
 
-    function buildPagesLink(basePath, filePath) {
-      // Pages serves files from the repo root (or subdir).
-      // Use relative link that works on project/user pages.
-      const cleanBase = basePath.endsWith("/") ? basePath : basePath + "/";
-      return cleanBase + filePath.split("/").map(encodeURIComponent).join("/");
-    }
-
     function render(files, basePath) {
-      grid.innerHTML = "";
       const q = (search.value || "").trim().toLowerCase();
 
-      const filtered = !q
-        ? files
-        : files.filter(f =>
-            f.path.toLowerCase().includes(q) ||
-            f.name.toLowerCase().includes(q)
-          );
+      // Hide this landing page itself by default
+      const visible = files.filter(f => f.path !== "index.html");
 
-      countPill.textContent = `${filtered.length} file${filtered.length === 1 ? "" : "s"}`;
+      const filtered = !q ? visible : visible.filter(f =>
+        f.path.toLowerCase().includes(q) || f.name.toLowerCase().includes(q)
+      );
 
-      if (filtered.length === 0) {
-        statusBox.innerHTML = `<strong>Status:</strong> No files match your filter.`;
-        return;
-      } else {
-        statusBox.innerHTML = `<strong>Status:</strong> Showing ${filtered.length} file${filtered.length === 1 ? "" : "s"}.`;
-      }
+      countChip.textContent = `${filtered.length} item${filtered.length === 1 ? "" : "s"}`;
+
+      grid.innerHTML = "";
+      emptyBox.style.display = filtered.length ? "none" : "block";
 
       const frag = document.createDocumentFragment();
 
       for (const f of filtered) {
-        // Optionally hide this index.html itself
-        // if (f.path === "index.html") continue;
-
         const a = document.createElement("a");
         a.className = "card";
         a.href = buildPagesLink(basePath, f.path);
 
-        const icon = iconTextFor(f.path);
         const ext = extOf(f.path);
         const sizeStr = formatBytes(f.size);
 
         a.innerHTML = `
-          <div class="row">
-            <div class="icon">${icon}</div>
-            <div style="min-width:0;flex:1">
+          <div class="top">
+            <div class="badge">${iconTextFor(f.path)}</div>
+            <div class="meta">
               <div class="name" title="${f.name}">${f.name}</div>
               <div class="path" title="${f.path}">${f.path}</div>
+              <div class="tags">
+                <span class="tag">${ext ? "." + ext : "file"}</span>
+                ${sizeStr ? `<span class="tag">${sizeStr}</span>` : ``}
+              </div>
             </div>
           </div>
-          <div class="meta">
-            ${ext ? `<span class="tag">.${ext}</span>` : `<span class="tag">no-ext</span>`}
-            ${sizeStr ? `<span class="tag">${sizeStr}</span>` : ``}
-          </div>
+          <div class="thumb"></div>
         `;
+
+        // Optional image thumbnails
+        if (isThumbableImage(f.path)) {
+          const thumb = a.querySelector(".thumb");
+          thumb.style.display = "block";
+          const img = document.createElement("img");
+          img.loading = "lazy";
+          img.src = buildPagesLink(basePath, f.path);
+          img.alt = f.name;
+          thumb.appendChild(img);
+        }
 
         frag.appendChild(a);
       }
@@ -362,48 +426,36 @@
       grid.appendChild(frag);
     }
 
-    // ---- Main ----
     (async function main() {
       try {
         const qp = getQueryParams();
-        const detected = detectGitHubPagesRepo();
+        const detected = detectPagesContext();
 
-        // Determine owner/repo/branch/startPath
-        const owner = qp.owner || CONFIG.owner || (detected ? detected.owner : "");
-        const repo  = qp.repo  || CONFIG.repo  || (detected ? detected.repo  : "");
-        const branch = qp.branch || CONFIG.branch || ""; // empty = default branch
+        const owner = qp.owner || CONFIG.owner || detected.owner;
+        const repo  = qp.repo  || CONFIG.repo  || detected.repo;
+        const branch = qp.branch || CONFIG.branch || "";
         const startPath = qp.startPath || CONFIG.startPath || "";
-        const basePath = detected ? detected.basePath : ("/"); // custom domains default to "/"
+        const basePath = detected.basePath || "/";
 
         if (!owner || !repo) {
-          statusBox.innerHTML = `
-            <strong>Status:</strong> Could not auto-detect <code>owner</code> and <code>repo</code>.
-            <br><br>
-            Add query params like:
-            <br>
-            <code>?owner=YOURNAME&repo=YOURREPO&branch=main</code>
-          `;
-          subtitle.textContent = "Waiting for repo configuration…";
-          repoPill.textContent = "repo: ?";
+          statusText.textContent = "Nothing to show yet.";
+          statusBox.style.display = "none";
+          emptyBox.style.display = "block";
+          emptyBox.textContent = "Repository source not configured.";
           return;
         }
 
-        repoPill.textContent = `repo: ${owner}/${repo}`;
-        subtitle.textContent = `Scanning ${owner}/${repo}${branch ? ` (branch: ${branch})` : ""}${startPath ? ` (path: ${startPath})` : ""}…`;
-
-        statusBox.innerHTML = `<strong>Status:</strong> Fetching file list from GitHub API…`;
-
+        statusText.textContent = "Building gallery…";
         const files = await listAllFiles({ owner, repo, branch, startPath });
-        files.sort((a, b) => a.path.localeCompare(b.path));
+        files.sort((a,b) => a.path.localeCompare(b.path));
 
-        statusBox.innerHTML = `<strong>Status:</strong> Found ${files.length} file${files.length === 1 ? "" : "s"}.`;
+        statusBox.style.display = "none";
         render(files, basePath);
 
         search.addEventListener("input", () => render(files, basePath));
-      } catch (err) {
-        console.error(err);
-        statusBox.innerHTML = `<strong>Status:</strong> Error: ${String(err.message || err)}`;
-        subtitle.textContent = "Failed to scan repo.";
+      } catch (e) {
+        console.error(e);
+        statusText.textContent = "Couldn’t load items.";
       }
     })();
   </script>
