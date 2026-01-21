@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Portfolio</title>
+  <title>Portfolio Collection</title>
 
   <style>
     :root{
@@ -337,6 +337,19 @@
       margin-left: auto;
       margin-right: auto;
     }
+    img.profile{
+    width: 140px;
+    height: 140px;
+    border-radius: 999px;          /* perfect circle */
+    object-fit: cover;             /* keeps face nicely cropped */
+    display: block;
+    margin: 0 auto;                /* center it */
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow:
+      0 10px 30px rgba(0,0,0,0.35),
+      0 0 0 6px rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.04);
+  }
 
     /* ✅ Theater mode: FULL BLEED 100% screen width */
     body.theater .gallery{
@@ -367,8 +380,9 @@
     <header>
       <div class="titleRow">
         <div class="leftHead">
-          <h1 id="pageTitle">Portfolio</h1>
-          <p class="tagline" id="tagline">Click anything to open it. Image folders become scrollable galleries.</p>
+          <img src="profile.png" class="profile">
+          <h1 id="pageTitle">Eric Kaltebrunner</h1>
+          <p class="tagline" id="tagline">"That rug really tied the room together," - Dude</p>
         </div>
       </div>
 
@@ -406,7 +420,7 @@
     };
 
     const IMAGE_EXTS = new Set(["png","jpg","jpeg","webp","gif","svg","avif"]);
-    const HIDE_FILES = new Set(["index.html"]);
+    const HIDE_FILES = new Set(["index.html", "profile.png"]);
 
     const $ = (id) => document.getElementById(id);
 
@@ -647,7 +661,7 @@
       theaterTimer = setTimeout(() => {
         advanceToNextImage();
         scheduleTheaterAdvance(false);
-      }, 5000);
+      }, 3400); //TIMER, THEATERTIMER
     }
 
     function getCurrentGalleryIndex(imgs) {
