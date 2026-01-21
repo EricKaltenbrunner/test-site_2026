@@ -17,8 +17,10 @@
       --shadow: 0 10px 30px rgba(0,0,0,0.35);
       --radius: 18px;
     }
-    *{box-sizing:border-box}
+
+    *{ box-sizing:border-box; }
     html, body { height: 100%; }
+
     body{
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -27,12 +29,32 @@
         radial-gradient(900px 600px at 20% 0%, rgba(125,211,252,0.16), transparent 60%),
         radial-gradient(900px 600px at 80% 10%, rgba(167,139,250,0.16), transparent 65%),
         var(--bg);
+      transition: background 220ms ease;
+    }
+
+    /* Theater overlay: dims everything behind (makes images feel cinematic) */
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0);
+      pointer-events: none;
+      transition: background 220ms ease;
+      z-index: 0;
+    }
+    body.theater{
+      background: #050608; /* darker base */
+    }
+    body.theater::before{
+      background: rgba(0,0,0,0.55);
     }
 
     .wrap{
       max-width: 1100px;
       margin: 0 auto;
       padding: 28px 18px 36px;
+      position: relative;
+      z-index: 1;
     }
 
     header{
@@ -63,6 +85,7 @@
       letter-spacing: 0.3px;
       line-height: 1.1;
     }
+
     .tagline{
       margin:0;
       color:var(--muted);
@@ -77,6 +100,7 @@
       flex-wrap:wrap;
       align-items:center;
       margin-top: 6px;
+      justify-content:flex-end;
     }
 
     .search{
@@ -91,7 +115,7 @@
     }
     .search::placeholder{ color: rgba(238,242,255,0.45); }
 
-    .chip{
+    .chip, .chipBtn{
       font-size: 12px;
       padding: 8px 10px;
       border-radius: 999px;
@@ -100,6 +124,22 @@
       color: var(--muted);
       user-select:none;
       white-space: nowrap;
+      backdrop-filter: blur(8px);
+    }
+
+    .chipBtn{
+      cursor: pointer;
+      transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+    }
+    .chipBtn:hover{
+      color: var(--text);
+      border-color: rgba(125,211,252,0.25);
+      background: rgba(255,255,255,0.05);
+    }
+    .chipBtn.on{
+      color: var(--text);
+      border-color: rgba(125,211,252,0.35);
+      box-shadow: 0 0 0 3px rgba(125,211,252,0.12) inset;
     }
 
     .status{
@@ -153,8 +193,8 @@
       padding: 8px 10px;
       border-radius: 999px;
       cursor:pointer;
-      text-decoration:none;
       font-size: 12px;
+      backdrop-filter: blur(8px);
     }
     .crumbs button:hover{
       color: var(--text);
@@ -267,23 +307,36 @@
       display:block;
     }
 
-    /* ✅ Portfolio Gallery Mode (seamless scroll) */
+    /* ✅ Seamless Portfolio Gallery Mode */
     .gallery{
       margin-top: 14px;
       display:flex;
       flex-direction:column;
-      gap: 0;            /* no vertical gaps */
+      gap: 0; /* no gaps */
     }
+
     .gallery img{
-      width:100%;
-      height:auto;
-      display:block;      /* removes inline gaps */
+      width: 100%;
+      height: auto;
+      display:block;
       margin:0;
       padding:0;
       border:0;
-      border-radius: 0;   /* seamless edges */
+      border-radius: 0;
       box-shadow:none;
       background: transparent;
+    }
+
+    /* ✅ Auto-fit width for portrait images */
+    .gallery img.portrait{
+      width: min(640px, 92vw); /* narrower + elegant */
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Theater mode: slightly more “gallery-like” feel */
+    body.theater .wrap{
+      max-width: 1000px;
     }
 
     .empty{
@@ -309,7 +362,11 @@
 
       <div class="topNav">
         <div class="crumbs" id="crumbs"></div>
-        <div class="controls" style="flex:1; justify-content:flex-end;">
+
+        <div class="controls" style="flex:1;">
+          <button id="theaterBtn" class="chipBtn" type="button" style="display:none;">
+            Theater: Off
+          </button>
           <input id="search" class="search" type="search" placeholder="Search…" />
           <div class="chip" id="countChip">0 items</div>
         </div>
@@ -351,6 +408,7 @@
     const crumbs = $("crumbs");
     const pageTitle = $("pageTitle");
     const tagline = $("tagline");
+    const theaterBtn = $("theaterBtn");
 
     let ctx = null;
     let dirChildren = new Map();
@@ -358,6 +416,11 @@
     let allDirs = new Set();
     let galleryDirs = new Set();
     let galleryThumb = new Map();
+
+    // Theater mode state
+    let theaterOn = false;
+    let theaterTimer = null;
+    let theaterScrollListener = null;
 
     function getQueryParams() {
       const p = new URLSearchParams(location.search);
@@ -376,7 +439,6 @@
       else url.searchParams.delete("p");
       history.pushState({}, "", url.toString());
       renderRoute();
-      // nice touch: jump to top when entering a gallery/folder
       window.scrollTo({ top: 0, behavior: "instant" });
     }
 
@@ -539,12 +601,14 @@
     }
 
     function renderGrid(items) {
+      stopTheaterMode(); // theater only makes sense in a gallery
+
+      theaterBtn.style.display = "none";
       grid.innerHTML = "";
       gallery.style.display = "none";
       grid.style.display = "grid";
 
       const q = (search.value || "").trim().toLowerCase();
-
       const filtered = !q ? items : items.filter(it =>
         (it.title || "").toLowerCase().includes(q) ||
         (it.subtitle || "").toLowerCase().includes(q)
@@ -623,11 +687,15 @@
       grid.appendChild(frag);
     }
 
-    /* ✅ Seamless gallery: just images, no frames, no captions, no open button */
+    /* ✅ Seamless gallery: images only + portrait auto-fit width */
     function renderGallery(dirPath) {
       grid.style.display = "none";
       gallery.style.display = "flex";
       gallery.innerHTML = "";
+
+      // Theater button visible only in gallery view
+      theaterBtn.style.display = "inline-flex";
+      updateTheaterButton();
 
       const images = getGalleryImages(dirPath);
       setCount(images.length);
@@ -640,6 +708,16 @@
         img.loading = "lazy";
         img.src = buildPagesLink(ctx.basePath, imgPath);
         img.alt = imgPath.split("/").pop() || "image";
+
+        // ✅ Auto-fit width: portrait gets a class after load
+        img.addEventListener("load", () => {
+          const w = img.naturalWidth || 0;
+          const h = img.naturalHeight || 0;
+          if (w && h && h > w * 1.15) {
+            img.classList.add("portrait");
+          }
+        });
+
         frag.appendChild(img);
       }
 
@@ -763,6 +841,116 @@
       return [...subfolders, ...files];
     }
 
+    // ---------------------------
+    // Theater Mode (optional)
+    // ---------------------------
+    function updateTheaterButton() {
+      theaterBtn.classList.toggle("on", theaterOn);
+      theaterBtn.textContent = theaterOn ? "Theater: On" : "Theater: Off";
+    }
+
+    function startTheaterMode() {
+      if (theaterOn) return;
+      theaterOn = true;
+      document.body.classList.add("theater");
+      updateTheaterButton();
+      scheduleTheaterAdvance(true);
+
+      theaterScrollListener = () => {
+        // if user scrolls manually, reset timer so it never fights them
+        scheduleTheaterAdvance(true);
+      };
+      window.addEventListener("scroll", theaterScrollListener, { passive: true });
+    }
+
+    function stopTheaterMode() {
+      if (!theaterOn) {
+        document.body.classList.remove("theater");
+        updateTheaterButton();
+        return;
+      }
+      theaterOn = false;
+      document.body.classList.remove("theater");
+      updateTheaterButton();
+      if (theaterTimer) clearTimeout(theaterTimer);
+      theaterTimer = null;
+      if (theaterScrollListener) {
+        window.removeEventListener("scroll", theaterScrollListener);
+        theaterScrollListener = null;
+      }
+    }
+
+    function scheduleTheaterAdvance(reset) {
+      if (!theaterOn) return;
+      if (reset && theaterTimer) clearTimeout(theaterTimer);
+
+      theaterTimer = setTimeout(() => {
+        advanceToNextImage();
+        scheduleTheaterAdvance(false);
+      }, 5000);
+    }
+
+    function getCurrentGalleryIndex(imgs) {
+      if (!imgs.length) return -1;
+
+      const mid = window.innerHeight / 2;
+
+      // Prefer the image that currently crosses the middle of the viewport
+      for (let i = 0; i < imgs.length; i++) {
+        const r = imgs[i].getBoundingClientRect();
+        if (r.top <= mid && r.bottom >= mid) return i;
+      }
+
+      // Fallback: closest to top
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < imgs.length; i++) {
+        const r = imgs[i].getBoundingClientRect();
+        const dist = Math.abs(r.top);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = i;
+        }
+      }
+      return best;
+    }
+
+    function advanceToNextImage() {
+      if (!theaterOn) return;
+      if (gallery.style.display === "none") return;
+
+      const imgs = Array.from(gallery.querySelectorAll("img"));
+      if (!imgs.length) return;
+
+      const current = getCurrentGalleryIndex(imgs);
+      const next = current >= 0 ? Math.min(current + 1, imgs.length - 1) : 0;
+
+      // If we’re at the end, loop back to the top (feels like a continuous showreel)
+      const target = (next === imgs.length - 1 && current === imgs.length - 1) ? imgs[0] : imgs[next];
+
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    theaterBtn.addEventListener("click", () => {
+      if (theaterOn) stopTheaterMode();
+      else startTheaterMode();
+    });
+
+    // Keyboard: "t" toggles theater, Esc exits
+    window.addEventListener("keydown", (e) => {
+      if (theaterBtn.style.display === "none") return; // only in gallery mode
+      if (e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        theaterOn ? stopTheaterMode() : startTheaterMode();
+      }
+      if (e.key === "Escape") {
+        stopTheaterMode();
+      }
+    });
+
+    // ---------------------------
+    // Routing & Rendering
+    // ---------------------------
     function renderRoute() {
       const qp = getQueryParams();
       const currentPath = normalizeDir(qp.p || "");
@@ -775,24 +963,24 @@
       } else {
         pageTitle.textContent = labelForDir(currentPath);
         tagline.textContent = galleryDirs.has(currentPath)
-          ? "A seamless scroll through this series."
+          ? "Scroll seamlessly through this series. (Press “T” for theater mode.)"
           : "Browse this folder.";
       }
 
-      // ✅ gallery mode
       if (currentPath && galleryDirs.has(currentPath)) {
         renderGallery(currentPath);
         return;
       }
 
-      // folder mode
+      // leaving gallery route => stop theater
+      stopTheaterMode();
+
       if (currentPath) {
         const items = buildFolderItems(currentPath);
         renderGrid(items);
         return;
       }
 
-      // root mode
       const rootItems = buildRootItems();
       renderGrid(rootItems);
     }
