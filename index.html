@@ -1,1 +1,419 @@
-Hello world!
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Repo File Grid</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #12151b;
+      --text: #e9eef7;
+      --muted: #aab6c8;
+      --border: rgba(255,255,255,0.10);
+      --accent: #5eead4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 800px at 10% 0%, #0f172a 0%, var(--bg) 55%);
+      color: var(--text);
+    }
+    header {
+      padding: 28px 18px 18px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      letter-spacing: 0.2px;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    input[type="search"] {
+      flex: 1 1 260px;
+      border: 1px solid var(--border);
+      background: rgba(18,21,27,0.75);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      outline: none;
+    }
+    input[type="search"]::placeholder { color: rgba(170,182,200,0.7); }
+    .pill {
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: rgba(18,21,27,0.55);
+      padding: 8px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 18px 30px;
+    }
+
+    .status {
+      border: 1px solid var(--border);
+      background: rgba(18,21,27,0.55);
+      padding: 14px 14px;
+      border-radius: 14px;
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .status strong { color: var(--text); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    a.card {
+      text-decoration: none;
+      border: 1px solid var(--border);
+      background: rgba(18,21,27,0.65);
+      border-radius: 16px;
+      padding: 14px;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+      display: grid;
+      gap: 8px;
+      min-height: 92px;
+    }
+    a.card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(94,234,212,0.45);
+      background: rgba(18,21,27,0.82);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      flex: 0 0 auto;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .name {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .path {
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .tag {
+      font-size: 11px;
+      color: rgba(233,238,247,0.85);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    footer {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 10px 18px 26px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      color: rgba(233,238,247,0.9);
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Files in this repo</h1>
+    <div class="sub" id="subtitle">Scanning…</div>
+
+    <div class="bar">
+      <input id="search" type="search" placeholder="Filter files by name or path…" />
+      <div class="pill" id="countPill">0 files</div>
+      <div class="pill" id="repoPill">repo: ?</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="status" id="statusBox">
+      <strong>Status:</strong> Loading file list…
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <footer>
+    Powered by GitHub Contents API.
+    If you’re on a custom domain, add query params like:
+    <code>?owner=YOURNAME&repo=YOURREPO&branch=main</code>
+  </footer>
+
+  <script>
+    /**
+     * --- CONFIG (optional) ---
+     * Usually auto-detected for github.io pages.
+     * If you use a custom domain, set these OR use query params:
+     *   ?owner=...&repo=...&branch=main&startPath=
+     */
+    const CONFIG = {
+      owner: "",      // e.g. "octocat"
+      repo: "",       // e.g. "my-pages-repo"
+      branch: "",     // e.g. "main"
+      startPath: ""   // scan from this subfolder ("" = root)
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const statusBox = $("statusBox");
+    const grid = $("grid");
+    const subtitle = $("subtitle");
+    const countPill = $("countPill");
+    const repoPill = $("repoPill");
+    const search = $("search");
+
+    // ---- Helpers ----
+    function getQueryParams() {
+      const p = new URLSearchParams(location.search);
+      return {
+        owner: p.get("owner") || "",
+        repo: p.get("repo") || "",
+        branch: p.get("branch") || "",
+        startPath: p.get("startPath") || ""
+      };
+    }
+
+    function detectGitHubPagesRepo() {
+      // Typical:
+      // - User pages: https://OWNER.github.io/   -> repo = OWNER/OWNER.github.io
+      // - Project pages: https://OWNER.github.io/REPO/ -> repo = OWNER/REPO
+      const host = location.hostname; // owner.github.io
+      if (!host.endsWith("github.io")) return null;
+
+      const owner = host.split(".")[0];
+      const firstSeg = location.pathname.split("/").filter(Boolean)[0] || "";
+      const repo = firstSeg ? firstSeg : `${owner}.github.io`;
+
+      // base path for links on Pages:
+      // project pages include "/REPO/", user pages are "/"
+      const basePath = firstSeg ? `/${firstSeg}/` : `/`;
+
+      return { owner, repo, basePath };
+    }
+
+    function extOf(path) {
+      const name = path.split("/").pop() || path;
+      const i = name.lastIndexOf(".");
+      return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
+    }
+
+    function iconTextFor(path) {
+      const ext = extOf(path);
+      if (!ext) return "FILE";
+      return ext.length <= 4 ? ext.toUpperCase() : ext.slice(0, 4).toUpperCase();
+    }
+
+    function formatBytes(bytes) {
+      if (typeof bytes !== "number") return "";
+      const units = ["B", "KB", "MB", "GB"];
+      let v = bytes;
+      let u = 0;
+      while (v >= 1024 && u < units.length - 1) { v /= 1024; u++; }
+      return `${v.toFixed(v >= 10 || u === 0 ? 0 : 1)} ${units[u]}`;
+    }
+
+    async function fetchDirContents(owner, repo, path, branch) {
+      const url = new URL(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}`);
+      if (branch) url.searchParams.set("ref", branch);
+
+      const res = await fetch(url.toString(), {
+        headers: { "Accept": "application/vnd.github+json" }
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`GitHub API error (${res.status}) for "${path}": ${text || res.statusText}`);
+      }
+      return res.json();
+    }
+
+    async function listAllFiles({ owner, repo, branch, startPath }) {
+      const files = [];
+      const queue = [startPath || ""]; // directory paths to scan ("" = root)
+
+      while (queue.length) {
+        const dir = queue.shift();
+        const items = await fetchDirContents(owner, repo, dir, branch);
+
+        // "contents" API returns an array for directories, or a single object for files.
+        if (!Array.isArray(items)) continue;
+
+        for (const item of items) {
+          if (item.type === "dir") {
+            queue.push(item.path);
+          } else if (item.type === "file") {
+            files.push({
+              path: item.path,
+              name: item.name,
+              size: item.size
+            });
+          }
+        }
+      }
+      return files;
+    }
+
+    function buildPagesLink(basePath, filePath) {
+      // Pages serves files from the repo root (or subdir).
+      // Use relative link that works on project/user pages.
+      const cleanBase = basePath.endsWith("/") ? basePath : basePath + "/";
+      return cleanBase + filePath.split("/").map(encodeURIComponent).join("/");
+    }
+
+    function render(files, basePath) {
+      grid.innerHTML = "";
+      const q = (search.value || "").trim().toLowerCase();
+
+      const filtered = !q
+        ? files
+        : files.filter(f =>
+            f.path.toLowerCase().includes(q) ||
+            f.name.toLowerCase().includes(q)
+          );
+
+      countPill.textContent = `${filtered.length} file${filtered.length === 1 ? "" : "s"}`;
+
+      if (filtered.length === 0) {
+        statusBox.innerHTML = `<strong>Status:</strong> No files match your filter.`;
+        return;
+      } else {
+        statusBox.innerHTML = `<strong>Status:</strong> Showing ${filtered.length} file${filtered.length === 1 ? "" : "s"}.`;
+      }
+
+      const frag = document.createDocumentFragment();
+
+      for (const f of filtered) {
+        // Optionally hide this index.html itself
+        // if (f.path === "index.html") continue;
+
+        const a = document.createElement("a");
+        a.className = "card";
+        a.href = buildPagesLink(basePath, f.path);
+
+        const icon = iconTextFor(f.path);
+        const ext = extOf(f.path);
+        const sizeStr = formatBytes(f.size);
+
+        a.innerHTML = `
+          <div class="row">
+            <div class="icon">${icon}</div>
+            <div style="min-width:0;flex:1">
+              <div class="name" title="${f.name}">${f.name}</div>
+              <div class="path" title="${f.path}">${f.path}</div>
+            </div>
+          </div>
+          <div class="meta">
+            ${ext ? `<span class="tag">.${ext}</span>` : `<span class="tag">no-ext</span>`}
+            ${sizeStr ? `<span class="tag">${sizeStr}</span>` : ``}
+          </div>
+        `;
+
+        frag.appendChild(a);
+      }
+
+      grid.appendChild(frag);
+    }
+
+    // ---- Main ----
+    (async function main() {
+      try {
+        const qp = getQueryParams();
+        const detected = detectGitHubPagesRepo();
+
+        // Determine owner/repo/branch/startPath
+        const owner = qp.owner || CONFIG.owner || (detected ? detected.owner : "");
+        const repo  = qp.repo  || CONFIG.repo  || (detected ? detected.repo  : "");
+        const branch = qp.branch || CONFIG.branch || ""; // empty = default branch
+        const startPath = qp.startPath || CONFIG.startPath || "";
+        const basePath = detected ? detected.basePath : ("/"); // custom domains default to "/"
+
+        if (!owner || !repo) {
+          statusBox.innerHTML = `
+            <strong>Status:</strong> Could not auto-detect <code>owner</code> and <code>repo</code>.
+            <br><br>
+            Add query params like:
+            <br>
+            <code>?owner=YOURNAME&repo=YOURREPO&branch=main</code>
+          `;
+          subtitle.textContent = "Waiting for repo configuration…";
+          repoPill.textContent = "repo: ?";
+          return;
+        }
+
+        repoPill.textContent = `repo: ${owner}/${repo}`;
+        subtitle.textContent = `Scanning ${owner}/${repo}${branch ? ` (branch: ${branch})` : ""}${startPath ? ` (path: ${startPath})` : ""}…`;
+
+        statusBox.innerHTML = `<strong>Status:</strong> Fetching file list from GitHub API…`;
+
+        const files = await listAllFiles({ owner, repo, branch, startPath });
+        files.sort((a, b) => a.path.localeCompare(b.path));
+
+        statusBox.innerHTML = `<strong>Status:</strong> Found ${files.length} file${files.length === 1 ? "" : "s"}.`;
+        render(files, basePath);
+
+        search.addEventListener("input", () => render(files, basePath));
+      } catch (err) {
+        console.error(err);
+        statusBox.innerHTML = `<strong>Status:</strong> Error: ${String(err.message || err)}`;
+        subtitle.textContent = "Failed to scan repo.";
+      }
+    })();
+  </script>
+</body>
+</html>
