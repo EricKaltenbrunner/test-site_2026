@@ -32,7 +32,7 @@
       transition: background 220ms ease;
     }
 
-    /* Theater overlay: dims everything behind (makes images feel cinematic) */
+    /* Theater overlay: dims everything behind */
     body::before{
       content:"";
       position: fixed;
@@ -43,10 +43,10 @@
       z-index: 0;
     }
     body.theater{
-      background: #050608; /* darker base */
+      background: #050608;
     }
     body.theater::before{
-      background: rgba(0,0,0,0.55);
+      background: rgba(0,0,0,0.62);
     }
 
     .wrap{
@@ -309,18 +309,20 @@
 
     /* ✅ Seamless Portfolio Gallery Mode */
     .gallery{
-      width: 80%:
       margin-top: 14px;
       display:flex;
       flex-direction:column;
       gap: 0; /* no gaps */
+      width: 100%;
     }
 
+    /* ✅ Gallery mode: 80% screen width */
     .gallery img{
-      width: 100%;
+      width: 80vw;              /* <-- your requirement */
+      max-width: 1100px;
       height: auto;
       display:block;
-      margin:0;
+      margin:0 auto;            /* centered */
       padding:0;
       border:0;
       border-radius: 0;
@@ -328,17 +330,25 @@
       background: transparent;
     }
 
-    /* ✅ Auto-fit width for portrait images */
+    /* ✅ Auto-fit width (portrait feels nicer in normal gallery mode) */
     .gallery img.portrait{
-      width: min(640px, 92vw); /* narrower + elegant */
+      width: min(58vw, 720px);
+      max-width: 92vw;
       margin-left: auto;
       margin-right: auto;
     }
 
-    /* Theater mode: slightly more “gallery-like” feel */
-    body.theater .wrap{
-      width: 100%:
-      max-width: 1000px;
+    /* ✅ Theater mode: FULL BLEED 100% screen width */
+    body.theater .gallery{
+      width: 100vw;
+      margin-left: calc(50% - 50vw); /* full-bleed trick inside centered layout */
+      margin-right: calc(50% - 50vw);
+    }
+    body.theater .gallery img,
+    body.theater .gallery img.portrait{
+      width: 100vw;             /* <-- your requirement */
+      max-width: none;
+      margin:0;
     }
 
     .empty{
@@ -602,10 +612,98 @@
       }
     }
 
-    function renderGrid(items) {
-      stopTheaterMode(); // theater only makes sense in a gallery
+    function updateTheaterButton() {
+      theaterBtn.classList.toggle("on", theaterOn);
+      theaterBtn.textContent = theaterOn ? "Theater: On" : "Theater: Off";
+    }
 
+    function startTheaterMode() {
+      if (theaterOn) return;
+      theaterOn = true;
+      document.body.classList.add("theater");
+      updateTheaterButton();
+      scheduleTheaterAdvance(true);
+
+      theaterScrollListener = () => scheduleTheaterAdvance(true);
+      window.addEventListener("scroll", theaterScrollListener, { passive: true });
+    }
+
+    function stopTheaterMode() {
+      theaterOn = false;
+      document.body.classList.remove("theater");
+      updateTheaterButton();
+      if (theaterTimer) clearTimeout(theaterTimer);
+      theaterTimer = null;
+      if (theaterScrollListener) {
+        window.removeEventListener("scroll", theaterScrollListener);
+        theaterScrollListener = null;
+      }
+    }
+
+    function scheduleTheaterAdvance(reset) {
+      if (!theaterOn) return;
+      if (reset && theaterTimer) clearTimeout(theaterTimer);
+
+      theaterTimer = setTimeout(() => {
+        advanceToNextImage();
+        scheduleTheaterAdvance(false);
+      }, 5000);
+    }
+
+    function getCurrentGalleryIndex(imgs) {
+      if (!imgs.length) return -1;
+
+      const mid = window.innerHeight / 2;
+
+      for (let i = 0; i < imgs.length; i++) {
+        const r = imgs[i].getBoundingClientRect();
+        if (r.top <= mid && r.bottom >= mid) return i;
+      }
+
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < imgs.length; i++) {
+        const r = imgs[i].getBoundingClientRect();
+        const dist = Math.abs(r.top);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = i;
+        }
+      }
+      return best;
+    }
+
+    function advanceToNextImage() {
+      if (!theaterOn) return;
+      if (gallery.style.display === "none") return;
+
+      const imgs = Array.from(gallery.querySelectorAll("img"));
+      if (!imgs.length) return;
+
+      const current = getCurrentGalleryIndex(imgs);
+      const next = current >= 0 ? Math.min(current + 1, imgs.length - 1) : 0;
+
+      const target = (next === imgs.length - 1 && current === imgs.length - 1) ? imgs[0] : imgs[next];
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    theaterBtn.addEventListener("click", () => {
+      theaterOn ? stopTheaterMode() : startTheaterMode();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (theaterBtn.style.display === "none") return;
+      if (e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        theaterOn ? stopTheaterMode() : startTheaterMode();
+      }
+      if (e.key === "Escape") stopTheaterMode();
+    });
+
+    function renderGrid(items) {
+      stopTheaterMode();
       theaterBtn.style.display = "none";
+
       grid.innerHTML = "";
       gallery.style.display = "none";
       grid.style.display = "grid";
@@ -689,13 +787,11 @@
       grid.appendChild(frag);
     }
 
-    /* ✅ Seamless gallery: images only + portrait auto-fit width */
     function renderGallery(dirPath) {
       grid.style.display = "none";
       gallery.style.display = "flex";
       gallery.innerHTML = "";
 
-      // Theater button visible only in gallery view
       theaterBtn.style.display = "inline-flex";
       updateTheaterButton();
 
@@ -711,7 +807,6 @@
         img.src = buildPagesLink(ctx.basePath, imgPath);
         img.alt = imgPath.split("/").pop() || "image";
 
-        // ✅ Auto-fit width: portrait gets a class after load
         img.addEventListener("load", () => {
           const w = img.naturalWidth || 0;
           const h = img.naturalHeight || 0;
@@ -843,116 +938,6 @@
       return [...subfolders, ...files];
     }
 
-    // ---------------------------
-    // Theater Mode (optional)
-    // ---------------------------
-    function updateTheaterButton() {
-      theaterBtn.classList.toggle("on", theaterOn);
-      theaterBtn.textContent = theaterOn ? "Theater: On" : "Theater: Off";
-    }
-
-    function startTheaterMode() {
-      if (theaterOn) return;
-      theaterOn = true;
-      document.body.classList.add("theater");
-      updateTheaterButton();
-      scheduleTheaterAdvance(true);
-
-      theaterScrollListener = () => {
-        // if user scrolls manually, reset timer so it never fights them
-        scheduleTheaterAdvance(true);
-      };
-      window.addEventListener("scroll", theaterScrollListener, { passive: true });
-    }
-
-    function stopTheaterMode() {
-      if (!theaterOn) {
-        document.body.classList.remove("theater");
-        updateTheaterButton();
-        return;
-      }
-      theaterOn = false;
-      document.body.classList.remove("theater");
-      updateTheaterButton();
-      if (theaterTimer) clearTimeout(theaterTimer);
-      theaterTimer = null;
-      if (theaterScrollListener) {
-        window.removeEventListener("scroll", theaterScrollListener);
-        theaterScrollListener = null;
-      }
-    }
-
-    function scheduleTheaterAdvance(reset) {
-      if (!theaterOn) return;
-      if (reset && theaterTimer) clearTimeout(theaterTimer);
-
-      theaterTimer = setTimeout(() => {
-        advanceToNextImage();
-        scheduleTheaterAdvance(false);
-      }, 5000);
-    }
-
-    function getCurrentGalleryIndex(imgs) {
-      if (!imgs.length) return -1;
-
-      const mid = window.innerHeight / 2;
-
-      // Prefer the image that currently crosses the middle of the viewport
-      for (let i = 0; i < imgs.length; i++) {
-        const r = imgs[i].getBoundingClientRect();
-        if (r.top <= mid && r.bottom >= mid) return i;
-      }
-
-      // Fallback: closest to top
-      let best = 0;
-      let bestDist = Infinity;
-      for (let i = 0; i < imgs.length; i++) {
-        const r = imgs[i].getBoundingClientRect();
-        const dist = Math.abs(r.top);
-        if (dist < bestDist) {
-          bestDist = dist;
-          best = i;
-        }
-      }
-      return best;
-    }
-
-    function advanceToNextImage() {
-      if (!theaterOn) return;
-      if (gallery.style.display === "none") return;
-
-      const imgs = Array.from(gallery.querySelectorAll("img"));
-      if (!imgs.length) return;
-
-      const current = getCurrentGalleryIndex(imgs);
-      const next = current >= 0 ? Math.min(current + 1, imgs.length - 1) : 0;
-
-      // If we’re at the end, loop back to the top (feels like a continuous showreel)
-      const target = (next === imgs.length - 1 && current === imgs.length - 1) ? imgs[0] : imgs[next];
-
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
-    theaterBtn.addEventListener("click", () => {
-      if (theaterOn) stopTheaterMode();
-      else startTheaterMode();
-    });
-
-    // Keyboard: "t" toggles theater, Esc exits
-    window.addEventListener("keydown", (e) => {
-      if (theaterBtn.style.display === "none") return; // only in gallery mode
-      if (e.key.toLowerCase() === "t") {
-        e.preventDefault();
-        theaterOn ? stopTheaterMode() : startTheaterMode();
-      }
-      if (e.key === "Escape") {
-        stopTheaterMode();
-      }
-    });
-
-    // ---------------------------
-    // Routing & Rendering
-    // ---------------------------
     function renderRoute() {
       const qp = getQueryParams();
       const currentPath = normalizeDir(qp.p || "");
@@ -974,7 +959,6 @@
         return;
       }
 
-      // leaving gallery route => stop theater
       stopTheaterMode();
 
       if (currentPath) {
